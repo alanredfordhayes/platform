@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: security
+    app.kubernetes.io/name: vault
+spec:
+  destination:
+    namespace: vault
+    server: https://kubernetes.default.svc
+  project: security
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.28.0
+    helm:
+      valueFiles:
+        - $values/vault/helm-values/vault-values.yaml
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    # Ignore changes to secrets that Vault manages internally (unseal keys, root tokens)
+    - group: ""
+      kind: Secret
+      namespace: vault
+      jsonPointers:
+        - /data
+    # Ignore changes to configmaps that are updated by Vault
+    - group: ""
+      kind: ConfigMap
+      namespace: vault
+      jsonPointers:
+        - /data
+    # Ignore changes to persistent volume claims (managed by StatefulSet)
+    - group: ""
+      kind: PersistentVolumeClaim
+      namespace: vault
+      jsonPointers:
+        - /status
+

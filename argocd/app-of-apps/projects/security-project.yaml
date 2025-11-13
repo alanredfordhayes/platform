@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: security
+  namespace: argocd
+spec:
+  description: Security applications project
+  sourceRepos:
+    - '*'  # Allow all source repositories
+  destinations:
+    - namespace: '*'  # Allow all namespaces
+      server: '*'     # Allow all clusters
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
