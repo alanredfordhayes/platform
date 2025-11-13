@@ -76,9 +76,89 @@ argocd app sync <child-app-name>
 
 ## Files
 
-- `automation-parent.yaml` - Example parent application manifest (customize for your use case)
-- `argocd-child.yaml` - Example child application for Argo CD management
+- `automation-parent.yaml` - Automation parent application (manages Argo CD)
+- `argocd-child.yaml` - Argo CD child application
+- `security-parent.yaml` - Security parent application (manages Vault)
+- `vault.yaml` - Vault child application
 - `templates/` - Helm templates (if using Helm)
+- `projects/automation-project.yaml` - Automation project definition
+- `projects/security-project.yaml` - Security project definition
+
+## Automation Project Setup
+
+The Automation project is configured to organize automation applications (like Argo CD) into a dedicated Argo CD project instead of using the default project.
+
+### Current Configuration
+
+All files are correctly configured:
+- ✅ `projects/automation-project.yaml` - Automation project with permissive permissions
+- ✅ `apps/automation-parent.yaml` - Uses `project: automation`
+- ✅ `apps/argocd-child.yaml` - Uses `project: automation` with label `app.kubernetes.io/instance: automation`
+
+### Applying the Automation Project
+
+**Important**: Files MUST be committed and pushed to Git before Argo CD can discover them. Argo CD reads from Git, not local files.
+
+1. **Commit and push changes to Git**:
+   ```bash
+   # Stage all changes
+   git add argocd/app-of-apps/projects/automation-project.yaml
+   git add argocd/app-of-apps/apps/automation-parent.yaml
+   git add argocd/app-of-apps/apps/argocd-child.yaml
+
+   # Commit
+   git commit -m "Create Automation project and configure Automation apps"
+
+   # Push to repository
+   git push origin main
+   ```
+
+2. **Apply the Automation project**:
+   ```bash
+   kubectl apply -f argocd/app-of-apps/projects/automation-project.yaml
+   ```
+
+3. **Verify project created**:
+   ```bash
+   kubectl get appproject automation -n argocd
+   ```
+
+4. **Apply/update the parent application**:
+   ```bash
+   kubectl apply -f argocd/app-of-apps/apps/automation-parent.yaml
+   ```
+
+5. **Refresh and sync in Argo CD**:
+   ```bash
+   argocd app get automation --refresh
+   argocd app sync automation
+   ```
+
+### Verification
+
+After applying, verify the setup:
+
+```bash
+# Verify project exists
+kubectl get appproject automation -n argocd
+
+# Verify parent app uses Automation project
+kubectl get application automation -n argocd -o jsonpath='{.spec.project}'
+# Should output: automation
+
+# Verify child apps use Automation project
+kubectl get application argocd -n argocd -o jsonpath='{.spec.project}'
+# Should output: automation
+
+# List apps in Automation project
+argocd app list --project automation
+```
+
+### Adding Future Child Apps
+
+When creating new child apps for the Automation parent, ensure they:
+1. Include the label: `app.kubernetes.io/instance: automation`
+2. Use the Automation project: `project: automation` (not `default`)
 
 ## Security Reminder
 

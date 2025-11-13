@@ -11,7 +11,7 @@ spec:
   destination:
     namespace: argocd
     server: https://kubernetes.default.svc
-  project: default
+  project: automation
   source:
     repoURL: https://github.com/alanredfordhayes/platform.git
     targetRevision: HEAD
