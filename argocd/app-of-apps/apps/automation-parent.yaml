@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: automation
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: automation
+spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: https://github.com/alanredfordhayes/platform.git
+    targetRevision: HEAD
+    path: argocd/app-of-apps/apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: "*"
+      kind: "Application"
+      namespace: "*"
+      jsonPointers:
+        - /spec/syncPolicy/automated
+        - /metadata/annotations/argocd.argoproj.io~1refresh
+        - /operation
