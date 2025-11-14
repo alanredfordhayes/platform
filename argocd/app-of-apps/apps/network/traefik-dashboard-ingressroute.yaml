@@ -1,0 +1,19 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: traefik
+  labels:
+    app.kubernetes.io/instance: network
+    app.kubernetes.io/name: traefik-dashboard
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`dashboard.localhost`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      services:
+        - name: api@internal
+          kind: TraefikService
+      priority: 10
+
