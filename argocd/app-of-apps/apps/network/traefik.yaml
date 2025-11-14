@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: network
+    app.kubernetes.io/name: traefik
+spec:
+  destination:
+    namespace: traefik
+    server: https://kubernetes.default.svc
+  project: network
+  source:
+    repoURL: https://traefik.github.io/charts
+    chart: traefik
+    targetRevision: 37.3.0  # Traefik v3.6.0 - Latest stable version
+    helm:
+      # Optional: Add custom values here or use valueFiles from Git
+      # values: |
+      #   deployment:
+      #     replicas: 2
+      #   ports:
+      #     web:
+      #       port: 80
+      #     websecure:
+      #       port: 443
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    # Ignore changes to configmaps that are updated by Traefik
+    - group: ""
+      kind: ConfigMap
+      namespace: traefik
+      jsonPointers:
+        - /data
+    # Ignore changes to secrets that Traefik manages
+    - group: ""
+      kind: Secret
+      namespace: traefik
+      jsonPointers:
+        - /data
+
