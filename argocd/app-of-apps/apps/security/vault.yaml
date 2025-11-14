@@ -13,13 +13,15 @@ spec:
     namespace: vault
     server: https://kubernetes.default.svc
   project: security
-  source:
-    repoURL: https://helm.releases.hashicorp.com
-    chart: vault
-    targetRevision: 0.28.0
-    helm:
-      valueFiles:
-        - https://raw.githubusercontent.com/alanredfordhayes/platform/HEAD/vault/helm-values/vault-values.yaml
+  sources:
+    - repoURL: https://helm.releases.hashicorp.com
+      chart: vault
+      targetRevision: 0.28.0
+      helm:
+        valueFiles:
+          - vault/helm-values/vault-values.yaml
+    - repoURL: https://github.com/alanredfordhayes/platform.git
+      targetRevision: HEAD
   syncPolicy:
     automated:
       prune: false
