@@ -1,0 +1,6 @@
+# Network Applications Directory
+
+This directory contains child applications managed by the Network parent application.
+
+Add your network-related application manifests here (e.g., ingress controllers, service meshes, CNI plugins, etc.).
+
