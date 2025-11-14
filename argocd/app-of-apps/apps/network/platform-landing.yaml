@@ -1,0 +1,184 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-landing
+  namespace: platform
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Platform Dashboard</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+          padding: 20px;
+        }
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+        header {
+          text-align: center;
+          color: white;
+          margin-bottom: 40px;
+          padding: 20px;
+        }
+        h1 {
+          font-size: 2.5em;
+          margin-bottom: 10px;
+        }
+        .subtitle {
+          font-size: 1.2em;
+          opacity: 0.9;
+        }
+        .apps-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          margin-top: 30px;
+        }
+        .app-card {
+          background: white;
+          border-radius: 12px;
+          padding: 25px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          text-decoration: none;
+          color: inherit;
+          display: block;
+        }
+        .app-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+        .app-card h2 {
+          color: #667eea;
+          margin-bottom: 10px;
+          font-size: 1.5em;
+        }
+        .app-card p {
+          color: #666;
+          line-height: 1.6;
+          margin-bottom: 15px;
+        }
+        .app-card .url {
+          color: #999;
+          font-size: 0.9em;
+          font-family: monospace;
+        }
+        .category {
+          margin-top: 40px;
+        }
+        .category h3 {
+          color: white;
+          margin-bottom: 20px;
+          font-size: 1.3em;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <header>
+          <h1>🚀 Platform Dashboard</h1>
+          <p class="subtitle">Unified access to all platform applications</p>
+        </header>
+
+        <div class="category">
+          <h3>Infrastructure & Operations</h3>
+          <div class="apps-grid">
+            <a href="http://argocd.localhost" class="app-card" target="_blank">
+              <h2>Argo CD</h2>
+              <p>GitOps continuous delivery tool for Kubernetes. Manage and deploy applications declaratively.</p>
+              <div class="url">argocd.localhost</div>
+            </a>
+            <a href="http://vault.localhost" class="app-card" target="_blank">
+              <h2>Vault</h2>
+              <p>Secrets management and data protection. Securely store and access secrets, API keys, and certificates.</p>
+              <div class="url">vault.localhost</div>
+            </a>
+            <a href="http://dashboard.localhost/dashboard/" class="app-card" target="_blank">
+              <h2>Traefik Dashboard</h2>
+              <p>Ingress controller dashboard. Monitor and manage routing, services, and middleware.</p>
+              <div class="url">dashboard.localhost/dashboard/</div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-landing
+  namespace: platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platform-landing
+  template:
+    metadata:
+      labels:
+        app: platform-landing
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: platform-landing
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-landing
+  namespace: platform
+spec:
+  selector:
+    app: platform-landing
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: platform-landing
+  namespace: platform
+  labels:
+    app.kubernetes.io/instance: network
+    app.kubernetes.io/name: platform-landing
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`localhost`) || Host(`platform.localhost`)
+      services:
+        - name: platform-landing
+          namespace: platform
+          port: 80
+      priority: 5
+

@@ -1,0 +1,20 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vault
+  namespace: vault
+  labels:
+    app.kubernetes.io/instance: network
+    app.kubernetes.io/name: vault
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`vault.localhost`)
+      services:
+        - name: vault
+          namespace: vault
+          port: 8200
+      priority: 10
+
