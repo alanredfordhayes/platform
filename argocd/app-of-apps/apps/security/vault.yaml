@@ -22,6 +22,7 @@ spec:
           - vault/helm-values/vault-values.yaml
     - repoURL: https://github.com/alanredfordhayes/platform.git
       targetRevision: HEAD
+      path: vault/helm-values
   syncPolicy:
     automated:
       prune: false
