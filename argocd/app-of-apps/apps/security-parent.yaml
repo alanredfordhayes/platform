@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://github.com/alanredfordhayes/platform.git
     targetRevision: HEAD
-    path: argocd/app-of-apps/apps
+    path: argocd/app-of-apps/apps/security
   syncPolicy:
     automated:
       prune: true
