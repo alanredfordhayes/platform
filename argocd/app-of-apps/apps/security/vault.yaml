@@ -23,6 +23,7 @@ spec:
     - repoURL: https://github.com/alanredfordhayes/platform.git
       targetRevision: HEAD
       path: vault/helm-values
+      ref: values
   syncPolicy:
     automated:
       prune: false
