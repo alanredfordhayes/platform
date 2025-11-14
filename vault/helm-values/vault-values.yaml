@@ -1,0 +1,138 @@
+# Vault Helm Chart Values
+# Configuration for High Availability (HA) deployment with Integrated Storage
+# Based on HashiCorp Vault Reference Architecture recommendations
+
+global:
+  # Enable OpenShift compatibility (set to false for standard Kubernetes)
+  openshift: false
+  
+  # TLS configuration
+  tlsDisable: false
+
+server:
+  # Enable High Availability mode
+  ha:
+    enabled: true
+    replicas: 5
+    # Anti-affinity rules to ensure pods are distributed across nodes
+    antiAffinity: "hard"
+    # Config for raft storage backend (Integrated Storage)
+    raft:
+      enabled: true
+      setNodeId: true
+      # Storage configuration
+      storage:
+        # Storage class for persistent volumes
+        # Use "standard" for minikube, or your cluster's default storage class
+        storageClass: "standard"
+        # Size of persistent volume
+        size: 10Gi
+        # Access mode
+        accessMode: ReadWriteOnce
+  
+  # Data storage configuration (for Integrated Storage)
+  dataStorage:
+    enabled: true
+    storageClass: "standard"
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  
+  # Resource limits and requests
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  
+  # Extra environment variables
+  extraEnvironmentVars:
+    VAULT_LOG_LEVEL: info
+    VAULT_LOG_FORMAT: json
+  
+  # Service account configuration
+  serviceAccount:
+    create: true
+    name: ""
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 100
+    fsGroup: 1000
+  
+  # Pod security context
+  extraVolumes: []
+  extraVolumeMounts: []
+  
+  # Service configuration
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 8200
+    annotations: {}
+  
+  # Ingress configuration (disabled by default)
+  ingress:
+    enabled: false
+  
+  # UI configuration
+  ui:
+    enabled: true
+  
+  # Audit device configuration
+  auditStorage:
+    enabled: false
+  
+  # Standalone mode (disabled for HA)
+  standalone:
+    enabled: false
+
+# Injector configuration (for automatic secret injection)
+injector:
+  enabled: true
+  # Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# CSI Provider configuration (optional)
+csi:
+  enabled: false
+
+# Service monitor for Prometheus (optional)
+serviceMonitor:
+  enabled: false
+
+# Network policies (optional)
+networkPolicy:
+  enabled: false
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 3
+
+# Priority class (optional)
+priorityClassName: ""
+
+# Node selector (optional)
+nodeSelector: {}
+
+# Tolerations (optional)
+tolerations: []
+
+# Affinity rules (additional to anti-affinity)
+affinity: {}
+
+# Extra labels
+extraLabels: {}
+
+# Extra annotations
+extraAnnotations: {}
+
