@@ -16,5 +16,7 @@ spec:
         - name: argocd-server
           namespace: argocd
           port: 80
+          scheme: http
+          passHostHeader: true
       priority: 10
 
