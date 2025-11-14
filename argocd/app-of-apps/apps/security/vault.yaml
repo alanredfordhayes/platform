@@ -19,7 +19,7 @@ spec:
     targetRevision: 0.28.0
     helm:
       valueFiles:
-        - $values/vault/helm-values/vault-values.yaml
+        - https://raw.githubusercontent.com/alanredfordhayes/platform/HEAD/vault/helm-values/vault-values.yaml
   syncPolicy:
     automated:
       prune: false
