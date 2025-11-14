@@ -1,6 +1,6 @@
 # Vault Helm Chart Values
-# Configuration for High Availability (HA) deployment with Integrated Storage
-# Based on HashiCorp Vault Reference Architecture recommendations
+# Configuration optimized for laptop/low-resource environments
+# Single instance deployment (non-HA) with reduced resource requirements
 
 global:
   # Enable OpenShift compatibility (set to false for standard Kubernetes)
@@ -10,12 +10,12 @@ global:
   tlsDisable: false
 
 server:
-  # Enable High Availability mode
+  # Enable High Availability mode (disabled for laptop)
   ha:
-    enabled: true
-    replicas: 5
-    # Anti-affinity rules to ensure pods are distributed across nodes
-    antiAffinity: "hard"
+    enabled: false
+    replicas: 1
+    # Anti-affinity rules (disabled for single replica)
+    antiAffinity: "soft"
     # Config for raft storage backend (Integrated Storage)
     raft:
       enabled: true
@@ -25,8 +25,8 @@ server:
         # Storage class for persistent volumes
         # Use "standard" for minikube, or your cluster's default storage class
         storageClass: "standard"
-        # Size of persistent volume
-        size: 10Gi
+        # Size of persistent volume (reduced for laptop)
+        size: 2Gi
         # Access mode
         accessMode: ReadWriteOnce
   
@@ -34,17 +34,17 @@ server:
   dataStorage:
     enabled: true
     storageClass: "standard"
-    size: 10Gi
+    size: 2Gi
     accessMode: ReadWriteOnce
   
-  # Resource limits and requests
+  # Resource limits and requests (reduced for laptop)
   resources:
     requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
       cpu: 500m
       memory: 512Mi
-    limits:
-      cpu: 2000m
-      memory: 2Gi
   
   # Extra environment variables
   extraEnvironmentVars:
@@ -85,21 +85,21 @@ server:
   auditStorage:
     enabled: false
   
-  # Standalone mode (disabled for HA)
+  # Standalone mode (enabled for laptop - single instance)
   standalone:
-    enabled: false
+    enabled: true
 
 # Injector configuration (for automatic secret injection)
 injector:
   enabled: true
-  # Resource limits
+  # Resource limits (reduced for laptop)
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 50m
+      memory: 64Mi
     limits:
-      cpu: 500m
-      memory: 256Mi
+      cpu: 200m
+      memory: 128Mi
 
 # CSI Provider configuration (optional)
 csi:
@@ -113,10 +113,10 @@ serviceMonitor:
 networkPolicy:
   enabled: false
 
-# Pod disruption budget
+# Pod disruption budget (disabled for single replica)
 podDisruptionBudget:
-  enabled: true
-  minAvailable: 3
+  enabled: false
+  minAvailable: 1
 
 # Priority class (optional)
 priorityClassName: ""
