@@ -27,9 +27,8 @@ spec:
                 requests:
                   cpu: 100m
                   memory: 128Mi
-            automatedSync: "false"
-            prune: "false"
-            selfHeal: "false"
+            pruneBool: "false"
+            selfHealBool: "false"
           # Second: Install PostgreSQL operator main deployment
           - name: postgres-operator-main
             syncWave: "0"
@@ -37,9 +36,8 @@ spec:
             chart: postgres-operator
             targetRevision: "1.10.0"
             helmValues: ""
-            automatedSync: "true"
-            prune: "true"
-            selfHeal: "true"
+            pruneBool: "true"
+            selfHealBool: "true"
           # Third: Install PostgreSQL operator UI
           - name: postgres-operator-ui
             syncWave: "1"
@@ -47,9 +45,8 @@ spec:
             chart: postgres-operator-ui
             targetRevision: "1.10.0"
             helmValues: ""
-            automatedSync: "true"
-            prune: "true"
-            selfHeal: "true"
+            pruneBool: "true"
+            selfHealBool: "true"
   template:
     metadata:
       name: '{{name}}'
@@ -74,8 +71,8 @@ spec:
           values: '{{helmValues}}'
       syncPolicy:
         automated:
-          prune: {{prune}}
-          selfHeal: {{selfHeal}}
+          prune: {{pruneBool}}
+          selfHeal: {{selfHealBool}}
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
