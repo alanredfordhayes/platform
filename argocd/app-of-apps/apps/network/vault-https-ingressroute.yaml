@@ -1,14 +1,14 @@
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: vault
+  name: vault-https
   namespace: vault
   labels:
     app.kubernetes.io/instance: network
-    app.kubernetes.io/name: vault
+    app.kubernetes.io/name: vault-https
 spec:
   entryPoints:
-    - web
+    - websecure
   routes:
     - kind: Rule
       match: Host(`vault.localhost`)
@@ -19,4 +19,7 @@ spec:
           scheme: http
           passHostHeader: true
       priority: 10
+  tls:
+    # Use self-signed certificate for localhost
+    secretName: ""
 
