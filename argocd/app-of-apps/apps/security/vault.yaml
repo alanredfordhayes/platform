@@ -25,7 +25,8 @@ spec:
           ha:
             enabled: false  # Disable HA for single-node (minikube)
             replicas: 1
-            antiAffinity: "soft"  # Allow pods on same node
+            antiAffinity: ""  # Disable anti-affinity for single-node (minikube)
+          affinity: {}  # Explicitly override any default anti-affinity rules
           dataStorage:
             enabled: true
             size: 2Gi  # Reduced for minikube
