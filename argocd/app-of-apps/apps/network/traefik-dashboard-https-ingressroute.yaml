@@ -1,0 +1,21 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard-https
+  namespace: traefik
+  labels:
+    app.kubernetes.io/instance: network
+    app.kubernetes.io/name: traefik-dashboard-https
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`dashboard.localhost`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      services:
+        - name: api@internal
+          kind: TraefikService
+      priority: 10
+  tls:
+    certResolver: letsencrypt
+

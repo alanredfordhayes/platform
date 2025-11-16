@@ -1,0 +1,119 @@
+---
+description: Forbid kubectl patch commands - enforce GitOps principles
+alwaysApply: true
+---
+
+# GitOps Rule: No kubectl patch
+
+## Forbidden Commands
+
+**NEVER use `kubectl patch` commands.** This violates GitOps principles where all changes must go through Git.
+
+### Forbidden Patterns
+
+- `kubectl patch`
+- `kubectl set`
+- `kubectl edit`
+- `kubectl annotate` (for configuration changes)
+- `kubectl label` (for configuration changes)
+- Any direct modification of Kubernetes resources via kubectl
+
+## Why This Rule Exists
+
+1. **GitOps Principle**: All infrastructure changes must be version-controlled in Git
+2. **Argo CD Management**: Resources are managed by Argo CD from Git - manual patches cause drift
+3. **Audit Trail**: Changes must be traceable through Git history
+4. **Consistency**: Ensures all environments match Git state
+5. **Rollback**: Changes can only be reverted through Git
+
+## Correct Approach
+
+### Step 1: Update Configuration Files
+
+Edit the appropriate YAML files in the repository:
+
+```bash
+# Edit the Argo CD Application or Helm values
+vim argocd/app-of-apps/apps/security/vault.yaml
+```
+
+### Step 2: Commit to Git
+
+```bash
+git add argocd/app-of-apps/apps/security/vault.yaml
+git commit -m "fix: update Vault configuration"
+git push origin main
+```
+
+### Step 3: Let Argo CD Sync
+
+Argo CD will automatically detect changes and sync (if auto-sync is enabled), or manually sync:
+
+```bash
+argocd app sync vault
+```
+
+## Exceptions
+
+The following kubectl commands are **ALLOWED** for troubleshooting and read-only operations:
+
+- `kubectl get` - Reading resources
+- `kubectl describe` - Inspecting resources
+- `kubectl logs` - Viewing logs
+- `kubectl exec` - Debugging pods
+- `kubectl port-forward` - Accessing services
+- `kubectl delete` - Only for cleanup when removing resources from Git first
+
+## When You Need to Make Changes
+
+1. **Find the source file** in `argocd/app-of-apps/` or `argocd/app-of-apps/values/`
+2. **Edit the file** with the desired changes
+3. **Commit and push** to Git
+4. **Let Argo CD sync** the changes
+
+## Example: Fixing Vault Configuration
+
+❌ **WRONG:**
+```bash
+kubectl patch statefulset vault -n vault --type='json' -p='[{"op": "replace", ...}]'
+```
+
+✅ **CORRECT:**
+```bash
+# 1. Edit the file
+vim argocd/app-of-apps/apps/security/vault.yaml
+
+# 2. Commit
+git add argocd/app-of-apps/apps/security/vault.yaml
+git commit -m "fix: update Vault StatefulSet configuration"
+git push origin main
+
+# 3. Sync (if auto-sync disabled)
+argocd app sync vault
+```
+
+## Emergency Situations
+
+If you absolutely must make an emergency change:
+
+1. Make the kubectl patch (document why)
+2. **IMMEDIATELY** update the Git file to match
+3. Commit and push the change
+4. Let Argo CD sync to ensure consistency
+
+**Note**: Emergency patches should be extremely rare and always followed by a Git commit.
+
+## Enforcement
+
+When suggesting commands or making changes:
+
+- ✅ Always update YAML files in the repository
+- ✅ Always commit changes to Git
+- ✅ Always let Argo CD manage the sync
+- ❌ Never suggest `kubectl patch` for configuration changes
+- ❌ Never suggest `kubectl set` for configuration changes
+- ❌ Never suggest `kubectl edit` for managed resources
+
+## Reminder
+
+**Remember**: If it's not in Git, it doesn't exist. All infrastructure is code.

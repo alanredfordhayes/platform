@@ -37,16 +37,7 @@ spec:
             storageClass: fast-ssd
         server:
           ingress:
-            enabled: true
-            ingressClassName: traefik
-            hosts:
-              - host: authentik.local  # Update with your actual hostname
-            annotations:
-              cert-manager.io/cluster-issuer: "letsencrypt-prod"
-            tls:
-              - secretName: authentik-tls
-                hosts:
-                  - authentik.local
+            enabled: false  # Using Traefik IngressRoute with Let's Encrypt instead
         env:
           - name: AUTHENTIK_SECRET_KEY
             valueFrom:

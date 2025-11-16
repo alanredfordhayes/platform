@@ -20,7 +20,6 @@ spec:
           passHostHeader: true
       priority: 10
   tls:
-    # Use self-signed certificate for localhost
-    secretName: ""
+    certResolver: letsencrypt
 
 

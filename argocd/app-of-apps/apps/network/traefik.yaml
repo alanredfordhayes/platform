@@ -18,15 +18,8 @@ spec:
     chart: traefik
     targetRevision: 37.3.0  # Traefik v3.6.0 - Latest stable version
     helm:
-      # Optional: Add custom values here or use valueFiles from Git
-      # values: |
-      #   deployment:
-      #     replicas: 2
-      #   ports:
-      #     web:
-      #       port: 80
-      #     websecure:
-      #       port: 443
+      valueFiles:
+        - $values/traefik-values.yaml
   syncPolicy:
     automated:
       prune: true
