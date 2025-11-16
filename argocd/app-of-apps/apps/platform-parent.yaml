@@ -1,28 +1,33 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-parent
+  name: platform
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    app.kubernetes.io/instance: platform
-    app.kubernetes.io/name: platform-parent
+    app.kubernetes.io/name: platform
 spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
   project: platform
   source:
-    repoURL: ${GIT_REPO_URL}
+    repoURL: https://github.com/alanredfordhayes/platform.git
     targetRevision: HEAD
     path: argocd/app-of-apps/apps/platform
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
       - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: "*"
+      kind: "Application"
+      namespace: "*"
+      jsonPointers:
+        - /spec/syncPolicy/automated
+        - /metadata/annotations/argocd.argoproj.io~1refresh
+        - /operation
 
