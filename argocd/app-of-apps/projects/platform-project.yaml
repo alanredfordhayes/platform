@@ -14,6 +14,8 @@ spec:
   
   # Destination clusters and namespaces
   destinations:
+    - namespace: argocd
+      server: https://kubernetes.default.svc
     - namespace: platform
       server: https://kubernetes.default.svc
     - namespace: postgres-operator
