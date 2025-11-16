@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-postgres-config
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/managed-by: argocd
+data:
+  vault-postgres.hcl: |
+    storage "postgresql" {
+      # Connection URL will be read from VAULT_PG_CONNECTION_URL environment variable
+      # if not specified here. We'll use the environment variable approach.
+      ha_enabled = "true"
+      ha_table = "vault_ha_locks"
+      table = "vault_kv_store"
+      max_parallel = "128"
+    }
+
