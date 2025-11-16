@@ -1,0 +1,111 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: crossplane
+  namespace: argocd
+  labels:
+    app.kubernetes.io/instance: automation
+    app.kubernetes.io/name: crossplane
+spec:
+  generators:
+    - list:
+        elements:
+          # First: Install CRDs using a pre-sync job that fixes/installs CRDs
+          - name: crossplane-crds
+            syncWave: "-1"
+          # Second: Install Crossplane main deployment
+          - name: crossplane-main
+            syncWave: "0"
+  template:
+    metadata:
+      name: '{{name}}'
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+      labels:
+        app.kubernetes.io/instance: automation
+        app.kubernetes.io/name: '{{name}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{syncWave}}'
+    spec:
+      project: automation
+      destination:
+        namespace: crossplane-system
+        server: https://kubernetes.default.svc
+      source:
+        {{#if (eq name "crossplane-crds")}}
+        # CRDs installation via Helm chart with init container
+        # The init container will install CRDs, but we configure it to handle existing CRDs properly
+        repoURL: https://charts.crossplane.io/stable
+        chart: crossplane
+        targetRevision: 2.1.1
+        helm:
+          values: |
+            # Minimal configuration for CRD installation
+            # Only deploy enough to trigger CRD installation via init container
+            replicaCount: 1
+            resources:
+              limits:
+                cpu: 100m
+                memory: 128Mi
+              requests:
+                cpu: 100m
+                memory: 128Mi
+            # Disable RBAC manager for CRDs-only installation
+            rbacManager:
+              enabled: false
+        {{else}}
+        # Full Crossplane deployment
+        repoURL: https://charts.crossplane.io/stable
+        chart: crossplane
+        targetRevision: 2.1.1
+        helm:
+          values: |
+            replicaCount: 2
+            resources:
+              limits:
+                cpu: 1000m
+                memory: 1Gi
+              requests:
+                cpu: 100m
+                memory: 128Mi
+            args:
+              - --enable-usages
+            rbacManager:
+              replicaCount: 2
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+        {{/if}}
+      syncPolicy:
+        {{#if (eq name "crossplane-crds")}}
+        # Manual sync for CRDs to ensure they're installed first
+        automated:
+          prune: false
+          selfHeal: false
+        {{else}}
+        # Automated sync for main deployment
+        automated:
+          prune: true
+          selfHeal: true
+        {{/if}}
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          namespace: crossplane-system
+          jsonPointers:
+            - /data
+        - group: ""
+          kind: ConfigMap
+          namespace: crossplane-system
+          jsonPointers:
+            - /data
+
