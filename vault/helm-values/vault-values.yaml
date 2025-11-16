@@ -1,43 +1,27 @@
-# Vault Helm Chart Values
-# Configuration optimized for laptop/low-resource environments
-# Single instance deployment (non-HA) with reduced resource requirements
+# Vault Values File for Minikube/Local Development
+# This file is referenced by Argo CD Application
 
 global:
-  # Enable OpenShift compatibility (set to false for standard Kubernetes)
-  openshift: false
-  
-  # TLS configuration
-  tlsDisable: false
+  tlsDisable: true  # Disable TLS for minikube/local development
 
 server:
-  # Enable High Availability mode (disabled for laptop)
+  # High Availability Mode (disabled for single-node)
   ha:
-    enabled: false
+    enabled: false  # Disable HA for single-node (minikube)
     replicas: 1
-    # Anti-affinity rules (disabled for single replica)
-    antiAffinity: "soft"
-    # Config for raft storage backend (Integrated Storage)
-    raft:
-      enabled: true
-      setNodeId: true
-      # Storage configuration
-      storage:
-        # Storage class for persistent volumes
-        # Use "standard" for minikube, or your cluster's default storage class
-        storageClass: "standard"
-        # Size of persistent volume (reduced for laptop)
-        size: 2Gi
-        # Access mode
-        accessMode: ReadWriteOnce
+    antiAffinity: "soft"  # Allow pods on same node
   
-  # Data storage configuration (for Integrated Storage)
+  # Data Storage
   dataStorage:
     enabled: true
-    storageClass: "standard"
-    size: 2Gi
-    accessMode: ReadWriteOnce
+    size: 2Gi  # Reduced for minikube
+    storageClass: standard  # Use minikube's default storage class
   
-  # Resource limits and requests (reduced for laptop)
+  # Audit Storage (disabled for minikube)
+  auditStorage:
+    enabled: false
+  
+  # Resources (reduced for minikube)
   resources:
     requests:
       cpu: 100m
@@ -45,94 +29,11 @@ server:
     limits:
       cpu: 500m
       memory: 512Mi
-  
-  # Extra environment variables
-  extraEnvironmentVars:
-    VAULT_LOG_LEVEL: info
-    VAULT_LOG_FORMAT: json
-  
-  # Service account configuration
-  serviceAccount:
-    create: true
-    name: ""
-  
-  # Security context
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 100
-    fsGroup: 1000
-  
-  # Pod security context
-  extraVolumes: []
-  extraVolumeMounts: []
-  
-  # Service configuration
-  service:
-    enabled: true
-    type: ClusterIP
-    port: 8200
-    annotations: {}
-  
-  # Ingress configuration (disabled by default)
-  ingress:
-    enabled: false
-  
-  # UI configuration
-  ui:
-    enabled: true
-  
-  # Audit device configuration
-  auditStorage:
-    enabled: false
-  
-  # Standalone mode (enabled for laptop - single instance)
-  standalone:
-    enabled: true
 
-# Injector configuration (for automatic secret injection)
-injector:
+# UI Configuration
+ui:
   enabled: true
-  # Resource limits (reduced for laptop)
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
 
-# CSI Provider configuration (optional)
-csi:
+# Ingress Configuration (disabled for local development)
+ingress:
   enabled: false
-
-# Service monitor for Prometheus (optional)
-serviceMonitor:
-  enabled: false
-
-# Network policies (optional)
-networkPolicy:
-  enabled: false
-
-# Pod disruption budget (disabled for single replica)
-podDisruptionBudget:
-  enabled: false
-  minAvailable: 1
-
-# Priority class (optional)
-priorityClassName: ""
-
-# Node selector (optional)
-nodeSelector: {}
-
-# Tolerations (optional)
-tolerations: []
-
-# Affinity rules (additional to anti-affinity)
-affinity: {}
-
-# Extra labels
-extraLabels: {}
-
-# Extra annotations
-extraAnnotations: {}
-
