@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-app-config
+  namespace: backstage
+  labels:
+    app.kubernetes.io/name: backstage-app-config
+    app.kubernetes.io/part-of: backstage
+    app.kubernetes.io/managed-by: argocd
+data:
+  app-config.yaml: |
+    # Backstage app-config.yaml
+    # Environment variables are substituted by Backstage at runtime
+    # Variables are provided via platform-config ConfigMap
+    
+    app:
+      title: Platform Engineering Demo
+      baseUrl: ${BACKSTAGE_BASE_URL}
+      support:
+        url: ${GITHUB_REPO_URL}
+        items:
+          - title: Documentation
+            icon: docs
+            links:
+              - url: ${GITHUB_REPO_URL}/blob/main/plan.md
+                title: Implementation Plan
+          - title: Support
+            icon: help
+            links:
+              - url: ${GITHUB_REPO_URL}/issues
+                title: GitHub Issues
+    
+    organization:
+      name: ${ORGANIZATION_NAME}
+    
+    backend:
+      baseUrl: ${BACKSTAGE_BASE_URL}
+      listen:
+        port: 7007
+      csp:
+        connect-src: ["'self'", 'http:', 'https:']
+      cors:
+        origin: ${BACKSTAGE_BASE_URL}
+        methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+        credentials: true
+      database:
+        client: pg
+        connection:
+          host: ${POSTGRES_HOST}
+          port: ${POSTGRES_PORT}
+          user: ${POSTGRES_USER}
+          password: ${POSTGRES_PASSWORD}
+          database: backstage
+          ssl:
+            rejectUnauthorized: false
+      cache:
+        store: memory
+    
+    integrations:
+      github:
+        - host: github.com
+          token: ${GITHUB_TOKEN}
+      gitlab:
+        - host: gitlab.com
+          token: ${GITLAB_TOKEN}
+    
+    proxy:
+      '/prometheus':
+        target: 'http://prometheus.platform.svc.cluster.local:9090'
+        allowedMethods: ['GET']
+      '/grafana':
+        target: 'https://grafana.cloud'
+        headers:
+          Authorization: 'Bearer ${GRAFANA_CLOUD_TOKEN}'
+    
+    techdocs:
+      builder: 'local'
+      generator:
+        runIn: 'local'
+      publisher:
+        type: 'local'
+    
+    auth:
+      environment: production
+      providers:
+        oauth2Proxy: {}
+    
+    auth.oauth2Proxy:
+      signIn:
+        resolvers:
+          - resolver: forwardedUserMatchingUserEntityName
+            options:
+              nameClaim: 'preferred_username'
+              emailClaim: 'email'
+    
+    kubernetes:
+      serviceLocatorMethod:
+        type: 'multiTenant'
+      clusterLocatorMethods:
+        - type: 'config'
+          clusters:
+            - url: https://kubernetes.default.svc
+              name: default
+              authProvider: 'serviceAccount'
+              skipTLSVerify: false
+              skipMetricsLookup: false
+              serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN} || undefined
+              dashboardUrl: ${KUBERNETES_DASHBOARD_URL}
+              dashboardApp: 'standard'
+              caData: ${K8S_CA_DATA} || undefined
+    
+    catalog:
+      import:
+        entityFilename: catalog-info.yaml
+        pullRequestBranchName: backstage-integration
+      locations:
+        - type: url
+          target: ${GITHUB_REPO_URL}/blob/main/catalog/catalog-info.yaml
+        - type: url
+          target: ${GITHUB_REPO_URL}/blob/main/catalog/components/*.yaml
+        - type: url
+          target: ${GITHUB_REPO_URL}/blob/main/catalog/systems/*.yaml
+    
+    permission:
+      enabled: true
+      policy:
+        admin:
+          users:
+            - 'user:default/admin'
+        reader:
+          users:
+            - 'user:default/guest'
+    
+    scaffolder:
+      defaultAuthor:
+        name: ${SCAFFOLDER_AUTHOR_NAME}
+        email: ${SCAFFOLDER_AUTHOR_EMAIL}
+      defaultCommitMessage: 'chore: created by Backstage'
+      defaultCommitBranch: 'main'
+    
+    search:
+      pg:
+        highlightOptions:
+          useHighlight: true
+          maxWordLength: 35
+          minWordLength: 3
+          shortWordLength: 3
+          highlightAll: false
+          maxFragments: 3
+          fragmentDelimiter: ' ... '
+

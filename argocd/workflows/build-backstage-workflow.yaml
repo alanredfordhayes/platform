@@ -1,0 +1,147 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: build-backstage
+  namespace: argo
+spec:
+  entrypoint: build-backstage-image
+  arguments:
+    parameters:
+      - name: backstage-version
+        description: Backstage version/tag
+        default: "latest"
+      - name: harbor-registry
+        description: Harbor registry URL (required - no default)
+      - name: github-repo
+        description: GitHub repository URL for Backstage app
+      - name: github-branch
+        description: GitHub branch for Backstage app repository
+        default: "main"
+      - name: platform-repo
+        description: Platform repository URL (for updating deployment manifests)
+        default: ${GIT_REPO_URL}
+      - name: platform-branch
+        description: Platform repository branch
+        default: "main"
+  templates:
+    - name: build-backstage-image
+      steps:
+        - - name: checkout
+            template: checkout-backstage
+        - - name: build-backstage
+            template: build-backstage-app
+            arguments:
+              parameters:
+                - name: backstage-version
+                  value: "{{workflow.parameters.backstage-version}}"
+                - name: harbor-registry
+                  value: "{{workflow.parameters.harbor-registry}}"
+        - - name: update-argocd
+            template: update-backstage-app
+            arguments:
+              parameters:
+                - name: backstage-version
+                  value: "{{workflow.parameters.backstage-version}}"
+                - name: harbor-registry
+                  value: "{{workflow.parameters.harbor-registry}}"
+                - name: platform-repo
+                  value: "{{workflow.parameters.platform-repo}}"
+                - name: platform-branch
+                  value: "{{workflow.parameters.platform-branch}}"
+
+    - name: checkout-backstage
+      container:
+        image: alpine/git:latest
+        command: [sh, -c]
+        args:
+          - |
+            git clone {{workflow.parameters.github-repo}} /workspace
+            cd /workspace
+            git checkout {{workflow.parameters.github-branch}}
+            ls -la
+
+    - name: build-backstage-app
+      inputs:
+        parameters:
+          - name: backstage-version
+          - name: harbor-registry
+      container:
+        image: node:20
+        command: [sh, -c]
+        args:
+          - |
+            cd /workspace
+            # Install dependencies
+            yarn install --frozen-lockfile
+            # Build Backstage app
+            yarn build
+            # Build Docker image using Backstage's build-image script
+            yarn build-image --tag {{inputs.parameters.harbor-registry}}/backstage:{{inputs.parameters.backstage-version}}
+            # Push to Harbor (requires docker login)
+            docker login {{inputs.parameters.harbor-registry}} -u $HARBOR_USERNAME -p $HARBOR_PASSWORD
+            docker push {{inputs.parameters.harbor-registry}}/backstage:{{inputs.parameters.backstage-version}}
+            docker push {{inputs.parameters.harbor-registry}}/backstage:latest
+        env:
+          - name: HARBOR_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: harbor-credentials
+                key: username
+          - name: HARBOR_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: harbor-credentials
+                key: password
+
+    - name: update-backstage-app
+      inputs:
+        parameters:
+          - name: backstage-version
+          - name: harbor-registry
+          - name: platform-repo
+          - name: platform-branch
+      container:
+        image: alpine/git:latest
+        command: [sh, -c]
+        args:
+          - |
+            # Clone platform repository with authentication
+            git clone https://${GIT_TOKEN}@$(echo {{inputs.parameters.platform-repo}} | sed 's|https://||') /platform-repo
+            cd /platform-repo
+            git checkout {{inputs.parameters.platform-branch}}
+            
+            # Configure git
+            git config user.name "Argo Workflows"
+            git config user.email "workflows@platform.local"
+            
+            # Update image tag in backstage deployment
+            # Option 1: If using Kustomize (recommended)
+            if [ -f "argocd/app-of-apps/apps/automation/backstage/kustomization.yaml" ]; then
+              # Update kustomization.yaml with new image
+              sed -i "s|newTag:.*|newTag: {{inputs.parameters.backstage-version}}|g" \
+                argocd/app-of-apps/apps/automation/backstage/kustomization.yaml
+            fi
+            
+            # Option 2: If using direct deployment manifest
+            if [ -f "argocd/app-of-apps/apps/automation/backstage/deployment.yaml" ]; then
+              sed -i "s|image: ${HARBOR_REGISTRY}/backstage:.*|image: {{inputs.parameters.harbor-registry}}/backstage:{{inputs.parameters.backstage-version}}|g" \
+                argocd/app-of-apps/apps/automation/backstage/deployment.yaml
+            fi
+            
+            # Commit and push
+            git add argocd/app-of-apps/apps/automation/backstage/
+            git commit -m "chore: update Backstage image to {{inputs.parameters.backstage-version}}"
+            git push https://${GIT_TOKEN}@$(echo {{inputs.parameters.platform-repo}} | sed 's|https://||') {{inputs.parameters.platform-branch}}
+            
+            echo "Updated platform repository with new Backstage image: {{inputs.parameters.harbor-registry}}/backstage:{{inputs.parameters.backstage-version}}"
+            echo "Argo CD will automatically sync the changes"
+        env:
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-credentials
+                key: token
+          - name: HARBOR_REGISTRY
+            value: "{{inputs.parameters.harbor-registry}}"
+
+

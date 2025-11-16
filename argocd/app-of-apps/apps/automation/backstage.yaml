@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: backstage
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: automation
+    app.kubernetes.io/name: backstage
+spec:
+  destination:
+    namespace: backstage
+    server: https://kubernetes.default.svc
+  project: automation
+  source:
+    repoURL: ${GIT_REPO_URL}
+    targetRevision: HEAD
+    path: argocd/app-of-apps/apps/automation/backstage
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      namespace: backstage
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: ConfigMap
+      namespace: backstage
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: PersistentVolumeClaim
+      namespace: backstage
+      jsonPointers:
+        - /status
+
+

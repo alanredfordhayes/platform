@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentik
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: security
+    app.kubernetes.io/name: authentik
+spec:
+  destination:
+    namespace: authentik
+    server: https://kubernetes.default.svc
+  project: security
+  source:
+    repoURL: https://charts.goauthentik.io
+    chart: authentik
+    targetRevision: 2024.10.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      namespace: authentik
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: ConfigMap
+      namespace: authentik
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: PersistentVolumeClaim
+      namespace: authentik
+      jsonPointers:
+        - /status
+
+

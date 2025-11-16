@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: security
+  name: observability
   namespace: argocd
 spec:
-  description: Security applications project
+  description: Observability applications project
   sourceRepos:
     - '*'  # Allow all source repositories
   destinations:

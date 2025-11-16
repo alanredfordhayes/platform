@@ -1,0 +1,76 @@
+# Vault Values File
+# This file contains configuration for HashiCorp Vault
+# Used by: All platform components for secrets management
+
+# Server Configuration
+server:
+  # High Availability Mode
+  ha:
+    enabled: true
+    replicas: 3
+  
+  # Data Storage
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: fast-ssd
+  
+  # Audit Storage
+  auditStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: fast-ssd
+  
+  # Resources
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+# UI Configuration
+ui:
+  enabled: true
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  hosts:
+    - host: ${VAULT_HOST}
+      paths:
+        - /
+  tls:
+    - secretName: vault-tls
+      hosts:
+        - ${VAULT_HOST}
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+# Service Account
+serviceAccount:
+  create: true
+  name: vault
+
+# Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Extra Environment Variables
+extraEnvironmentVars:
+  VAULT_DEV_ROOT_TOKEN_ID: ""
+  VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+
+# Affinity (for HA)
+affinity: {}
+
+# Tolerations
+tolerations: []
+
+# Node Selectors
+nodeSelector: {}
+

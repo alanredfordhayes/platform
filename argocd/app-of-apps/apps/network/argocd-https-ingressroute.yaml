@@ -1,0 +1,26 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-https
+  namespace: argocd
+  labels:
+    app.kubernetes.io/instance: network
+    app.kubernetes.io/name: argocd-https
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`argocd.localhost`)
+      services:
+        - name: argocd-server
+          namespace: argocd
+          port: 443
+          scheme: https
+          passHostHeader: true
+      priority: 10
+  tls:
+    # Use self-signed certificate for localhost
+    secretName: ""
+
+

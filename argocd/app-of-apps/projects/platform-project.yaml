@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: platform-project
+spec:
+  description: Platform infrastructure components (PostgreSQL, Redis)
+  
+  # Source repositories
+  sourceRepos:
+    - '*'
+  
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: platform
+      server: https://kubernetes.default.svc
+    - namespace: postgres-operator
+      server: https://kubernetes.default.svc
+  
+  # Cluster resource whitelist
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: 'acid.zalan.do'
+      kind: '*'
+  
+  # Namespace resource whitelist
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  # Roles for RBAC
+  roles:
+    - name: platform-admin
+      description: Platform infrastructure administrator
+      policies:
+        - p, proj:platform:platform-admin, applications, *, platform/*, allow
+        - p, proj:platform:platform-admin, applications, *, postgres-operator/*, allow
+      groups:
+        - platform:admins
+    
+    - name: platform-readonly
+      description: Platform infrastructure read-only access
+      policies:
+        - p, proj:platform:platform-readonly, applications, get, platform/*, allow
+        - p, proj:platform:platform-readonly, applications, get, postgres-operator/*, allow
+      groups:
+        - platform:viewers
+

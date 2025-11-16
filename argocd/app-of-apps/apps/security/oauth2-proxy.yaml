@@ -1,0 +1,75 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: oauth2-proxy
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: security
+    app.kubernetes.io/name: oauth2-proxy
+spec:
+  destination:
+    namespace: oauth2-proxy
+    server: https://kubernetes.default.svc
+  project: security
+  source:
+    repoURL: https://oauth2-proxy.github.io/manifests
+    chart: oauth2-proxy
+    targetRevision: <latest-version>  # Use Context7 MCP to get latest version
+    helm:
+      valueFiles:
+        - $values/oauth2-proxy-values.yaml
+      values: |
+        config:
+          clientID: "env://OAUTH2_PROXY_CLIENT_ID"
+          clientSecret: "env://OAUTH2_PROXY_CLIENT_SECRET"
+          cookieSecret: "env://OAUTH2_PROXY_COOKIE_SECRET"
+          provider: oidc
+          oidcIssuerURL: ${AUTHENTIK_ISSUER_URL}
+          emailDomains:
+            - "*"
+          upstreams:
+            - file:///dev/null
+          httpAddress: "0.0.0.0:4180"
+          reverseProxy: true
+          passHostHeader: true
+          passUserHeaders: true
+          setXForwardedFor: true
+          skipAuthRegex:
+            - "^/.well-known/acme-challenge"
+          whitelistDomains:
+            - "${OAUTH2_PROXY_WHITELIST_DOMAIN}"
+        replicaCount: 2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        service:
+          type: ClusterIP
+          port: 4180
+        ingress:
+          enabled: false  # OAuth2 Proxy is used as Traefik middleware, not ingress
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      namespace: oauth2-proxy
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: ConfigMap
+      namespace: oauth2-proxy
+      jsonPointers:
+        - /data
+

@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: observability
+    app.kubernetes.io/name: alloy
+spec:
+  destination:
+    namespace: alloy
+    server: https://kubernetes.default.svc
+  project: observability
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: alloy
+    targetRevision: 0.4.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      namespace: alloy
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: ConfigMap
+      namespace: alloy
+      jsonPointers:
+        - /data
+
+

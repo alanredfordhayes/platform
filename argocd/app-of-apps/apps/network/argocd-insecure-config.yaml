@@ -7,3 +7,4 @@ data:
   server.insecure: "true"
   # Allow HTTP access when behind a reverse proxy (Traefik)
 
+

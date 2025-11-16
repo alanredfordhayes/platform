@@ -1,0 +1,79 @@
+# OAuth2 Proxy Values File
+# This file contains configuration for OAuth2 Proxy
+# Used by: Backstage and other applications requiring authentication
+
+# Configuration
+config:
+  # Client credentials from External Secrets
+  clientID: "env://OAUTH2_PROXY_CLIENT_ID"
+  clientSecret: "env://OAUTH2_PROXY_CLIENT_SECRET"
+  cookieSecret: "env://OAUTH2_PROXY_COOKIE_SECRET"
+  
+  # OIDC Provider (Authentik)
+  provider: oidc
+  oidcIssuerURL: ${AUTHENTIK_ISSUER_URL}
+  
+  # Email domains (allow all)
+  emailDomains:
+    - "*"
+  
+  # Upstream configuration
+  upstreams:
+    - file:///dev/null  # Will be overridden by Traefik middleware
+  
+  # HTTP Configuration
+  httpAddress: "0.0.0.0:4180"
+  reverseProxy: true
+  passHostHeader: true
+  passUserHeaders: true
+  setXForwardedFor: true
+  
+  # Skip authentication for specific paths
+  skipAuthRegex:
+    - "^/.well-known/acme-challenge"
+  
+  # Whitelist domains
+  whitelistDomains:
+    - "${OAUTH2_PROXY_WHITELIST_DOMAIN}"
+
+# Replica Count
+replicaCount: 2
+
+# Resources
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Service Configuration
+service:
+  type: ClusterIP
+  port: 4180
+
+# Ingress (disabled - used as Traefik middleware)
+ingress:
+  enabled: false
+
+# Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  fsGroup: 65534
+
+# Service Account
+serviceAccount:
+  create: true
+  name: oauth2-proxy
+
+# Affinity
+affinity: {}
+
+# Tolerations
+tolerations: []
+
+# Node Selectors
+nodeSelector: {}
+

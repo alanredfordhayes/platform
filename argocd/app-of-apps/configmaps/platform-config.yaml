@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: default
+  labels:
+    app.kubernetes.io/name: platform-config
+    app.kubernetes.io/part-of: platform
+    app.kubernetes.io/managed-by: argocd
+data:
+  # Backstage Configuration
+  BACKSTAGE_BASE_URL: "https://backstage.yourdomain.com"
+  GITHUB_REPO_URL: "https://github.com/your-org/platform"
+  ORGANIZATION_NAME: "Platform Engineering Team"
+  KUBERNETES_DASHBOARD_URL: "https://kubernetes-dashboard.yourdomain.com"
+  SCAFFOLDER_AUTHOR_NAME: "Platform Engineering Team"
+  SCAFFOLDER_AUTHOR_EMAIL: "platform@yourdomain.com"
+  
+  # Infrastructure URLs
+  HARBOR_REGISTRY: "harbor.yourdomain.com"
+  AUTHENTIK_ISSUER_URL: "https://authentik.yourdomain.com/application/o/oauth2-proxy"
+  OAUTH2_PROXY_WHITELIST_DOMAIN: ".yourdomain.com"
+  VAULT_HOST: "vault.yourdomain.com"
+  GIT_REPO_URL: "https://github.com/your-org/platform.git"
+  
+  # Cluster Configuration
+  CLUSTER_NAME: "platform-cluster"
+

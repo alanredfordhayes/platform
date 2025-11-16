@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/instance: automation
+    app.kubernetes.io/name: harbor
+spec:
+  destination:
+    namespace: harbor
+    server: https://kubernetes.default.svc
+  project: automation
+  source:
+    repoURL: https://helm.goharbor.io
+    chart: harbor
+    targetRevision: 1.15.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      namespace: harbor
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: ConfigMap
+      namespace: harbor
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: PersistentVolumeClaim
+      namespace: harbor
+      jsonPointers:
+        - /status
+
+

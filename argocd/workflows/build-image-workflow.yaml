@@ -1,0 +1,121 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: build-image
+  namespace: argo
+spec:
+  entrypoint: build-and-push
+  arguments:
+    parameters:
+      - name: image-name
+        description: Name of the image to build
+      - name: image-tag
+        description: Tag for the image (default: latest)
+        default: "latest"
+      - name: harbor-registry
+        description: Harbor registry URL (required - no default)
+      - name: dockerfile-path
+        description: Path to Dockerfile
+        default: "Dockerfile"
+      - name: context-path
+        description: Build context path
+        default: "."
+      - name: github-repo
+        description: GitHub repository URL
+      - name: github-branch
+        description: GitHub branch
+        default: "main"
+  templates:
+    - name: build-and-push
+      steps:
+        - - name: checkout
+            template: checkout-code
+        - - name: build-image
+            template: build-with-kaniko
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "{{workflow.parameters.image-name}}"
+                - name: image-tag
+                  value: "{{workflow.parameters.image-tag}}"
+                - name: harbor-registry
+                  value: "{{workflow.parameters.harbor-registry}}"
+                - name: dockerfile-path
+                  value: "{{workflow.parameters.dockerfile-path}}"
+                - name: context-path
+                  value: "{{workflow.parameters.context-path}}"
+        - - name: update-argocd
+            template: update-argocd-app
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "{{workflow.parameters.image-name}}"
+                - name: image-tag
+                  value: "{{workflow.parameters.image-tag}}"
+                - name: harbor-registry
+                  value: "{{workflow.parameters.harbor-registry}}"
+
+    - name: checkout-code
+      container:
+        image: alpine/git:latest
+        command: [sh, -c]
+        args:
+          - |
+            git clone {{workflow.parameters.github-repo}} /workspace
+            cd /workspace
+            git checkout {{workflow.parameters.github-branch}}
+            ls -la
+
+    - name: build-with-kaniko
+      inputs:
+        parameters:
+          - name: image-name
+          - name: image-tag
+          - name: harbor-registry
+          - name: dockerfile-path
+          - name: context-path
+      container:
+        image: gcr.io/kaniko-project/executor:latest
+        args:
+          - --dockerfile={{inputs.parameters.dockerfile-path}}
+          - --context=/workspace/{{inputs.parameters.context-path}}
+          - --destination={{inputs.parameters.harbor-registry}}/{{inputs.parameters.image-name}}:{{inputs.parameters.image-tag}}
+          - --destination={{inputs.parameters.harbor-registry}}/{{inputs.parameters.image-name}}:latest
+          - --insecure
+          - --skip-tls-verify
+        volumeMounts:
+          - name: docker-config
+            mountPath: /kaniko/.docker
+        env:
+          - name: REGISTRY_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: harbor-credentials
+                key: username
+          - name: REGISTRY_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: harbor-credentials
+                key: password
+      volumes:
+        - name: docker-config
+          secret:
+            secretName: harbor-credentials
+
+    - name: update-argocd-app
+      inputs:
+        parameters:
+          - name: image-name
+          - name: image-tag
+          - name: harbor-registry
+      container:
+        image: argoproj/argocd:latest
+        command: [sh, -c]
+        args:
+          - |
+            # Update Argo CD application with new image tag
+            # This would typically update a values file in Git
+            echo "Image built: {{inputs.parameters.harbor-registry}}/{{inputs.parameters.image-name}}:{{inputs.parameters.image-tag}}"
+            echo "Update Argo CD application manifest with new image tag"
+
+
