@@ -27,12 +27,29 @@ spec:
             replicas: 1
             antiAffinity: ""  # Disable anti-affinity for single-node (minikube)
           affinity: {}  # Explicitly override any default anti-affinity rules
+          # Disable file storage - using PostgreSQL backend instead
           dataStorage:
-            enabled: true
-            size: 2Gi  # Reduced for minikube
-            storageClass: standard  # Use minikube's default storage class
+            enabled: false
           auditStorage:
             enabled: false  # Disable audit storage for minikube
+          # PostgreSQL storage backend configuration
+          # Use environment variable for connection URL (Vault PostgreSQL backend supports VAULT_PG_CONNECTION_URL)
+          extraEnvironmentVars:
+            VAULT_PG_CONNECTION_URL:
+              valueFrom:
+                secretKeyRef:
+                  name: vault-postgres-connection
+                  key: connection_url
+          # Mount ConfigMap with PostgreSQL storage configuration
+          extraVolumes:
+            - type: configMap
+              name: vault-postgres-config
+          extraVolumeMounts:
+            - mountPath: /vault/config/postgres
+              name: vault-postgres-config
+              readOnly: true
+          # Configure Vault to use the PostgreSQL config file
+          extraArgs: -config=/vault/config/postgres/vault-postgres.hcl
           resources:
             requests:
               cpu: 100m
