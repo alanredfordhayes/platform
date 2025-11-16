@@ -43,6 +43,8 @@ spec:
           enabled: true
         ingress:
           enabled: false  # Disable ingress for local development
+        injector:
+          antiAffinity: "soft"  # Allow agent-injector pods on same node (for minikube)
   syncPolicy:
     automated:
       prune: false
