@@ -9,6 +9,11 @@ This is a GitOps-managed Kubernetes platform repository using Argo CD for contin
 ### GitOps First
 - **ALL changes must go through Git** - no direct kubectl modifications
 - **NEVER use `kubectl patch`, `kubectl set`, `kubectl edit`** for configuration changes
+- **NEVER apply inline configurations** - all YAML/JSON must be in files before application
+  - ❌ Forbidden: `kubectl apply -f - <<'EOF'` (heredoc patterns)
+  - ❌ Forbidden: Piping YAML to kubectl via stdin
+  - ❌ Forbidden: Python scripts applying configurations from memory/tempfiles
+  - ✅ Required: Create YAML files in repository, commit to Git, then apply
 - All infrastructure changes must be committed and pushed to Git
 - Argo CD manages all deployments from Git state
 - If it's not in Git, it doesn't exist
@@ -384,11 +389,42 @@ git push origin main
 ## Important Reminders
 
 - **GitOps is the law**: All changes go through Git
+- **No inline configurations**: All YAML/JSON must be in files, committed to Git before application
+- **No kubectl patches**: Use Git-based configuration changes only
 - **Context7 for versions**: Always check latest versions
 - **Vault for secrets**: Never commit secrets
 - **Argo CD manages**: Let Argo CD handle deployments
 - **Document changes**: Update PLAN.md and README files
 - **Test before commit**: Validate YAML and dependencies
+- **Follow Cursor rules**: Adhere to `.cursor/rules/` enforcement
+
+## Cursor Rules
+
+This repository includes Cursor rules (`.cursor/rules/`) that enforce GitOps principles and coding standards:
+
+### Active Rules
+
+- **`no-kubectl-patch.mdc`**: Prevents use of `kubectl patch`, `kubectl set`, `kubectl edit` commands
+- **`no-inline-config-apply.mdc`**: Prevents inline configuration application in shell scripts (e.g., `kubectl apply -f - <<'EOF'`)
+- **`no-inline-config-python.mdc`**: Prevents inline configuration application in Python scripts
+
+### Rule Principles
+
+All rules enforce:
+- **File-based configuration**: All YAML/JSON must be written to files in the repository
+- **Git versioning**: All configurations must be committed to Git before application
+- **Traceability**: Changes must be visible in Git history
+- **Argo CD compatibility**: Resources managed by Argo CD must come from Git
+
+### Using Rules
+
+These rules are automatically applied in Cursor chat sessions. They prevent:
+- Inline YAML application via heredoc patterns
+- Temporary file usage without Git commits
+- Direct kubectl modifications that bypass Git
+- Python scripts that apply configurations without saving to files
+
+For details on each rule, see the `.cursor/rules/` directory.
 
 ## Additional Resources
 
@@ -396,6 +432,7 @@ git push origin main
 - **README.md**: Quick start guide
 - **Values README**: `argocd/app-of-apps/values/README.md`
 - **ConfigMaps README**: `argocd/app-of-apps/configmaps/README.md`
+- **Cursor Rules**: `.cursor/rules/` - GitOps enforcement rules
 - **Argo CD Docs**: https://argo-cd.readthedocs.io/
 - **External Secrets Docs**: https://external-secrets.io/
 
