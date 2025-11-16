@@ -18,8 +18,6 @@ spec:
     chart: vault
     targetRevision: 0.28.0
     helm:
-      valueFiles:
-        - $values/vault-values.yaml
       values: |
         global:
           tlsDisable: true  # Disable TLS for minikube/local development
