@@ -14,8 +14,8 @@ spec:
     server: https://kubernetes.default.svc
   project: automation
   source:
-    repoURL: ${GIT_REPO_URL}
-    targetRevision: HEAD
+    repoURL: https://github.com/alanredfordhayes/platform.git
+    targetRevision: main
     path: argocd/app-of-apps/apps/platform/postgresql-cluster
   syncPolicy:
     automated:
