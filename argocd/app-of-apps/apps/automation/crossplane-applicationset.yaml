@@ -77,8 +77,7 @@ spec:
         chart: '{{.chart}}'
         targetRevision: '{{.targetRevision}}'
         helm:
-          values: |
-{{.helmValues}}
+          values: '{{.helmValues}}'
       syncPolicy:
         automated:
           prune: {{if eq .pruneBool "true"}}true{{else}}false{{end}}
