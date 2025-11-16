@@ -1,0 +1,84 @@
+# Authentik Values File
+# This file contains configuration for Authentik
+# Used by: All platform components for authentication
+
+# Authentik Configuration
+authentik:
+  # Secret Key (REQUIRED) - Generate with: openssl rand 60 | base64 -w 0
+  secret_key: "${AUTHENTIK_SECRET_KEY}"  # Replace with actual secret key or use External Secrets
+  
+  # Error Reporting
+  error_reporting:
+    enabled: true
+  
+  # PostgreSQL Configuration
+  # Using external PostgreSQL (Zalando Postgres Operator)
+  postgresql:
+    enabled: false  # Disable embedded PostgreSQL
+    host: "platform-postgres.platform.svc.cluster.local"
+    port: 5432
+    database: "authentik"
+    user: "zalando"
+    password: "env://AUTHENTIK_POSTGRESQL_PASSWORD"  # From External Secrets
+
+# Server Configuration
+server:
+  # Ingress Configuration
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - host: ${AUTHENTIK_HOST}  # e.g., authentik.yourdomain.com
+        paths:
+          - /
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    tls:
+      - secretName: authentik-tls
+        hosts:
+          - ${AUTHENTIK_HOST}
+  
+  # Resources
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+# Worker Configuration
+worker:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+# PostgreSQL (disabled - using external)
+postgresql:
+  enabled: false
+
+# Redis Configuration (for caching)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false  # Can enable if using shared Redis
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Persistence
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: fast-ssd
+

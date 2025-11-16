@@ -13,16 +13,38 @@ spec:
     namespace: vault
     server: https://kubernetes.default.svc
   project: security
-  sources:
-    - repoURL: https://helm.releases.hashicorp.com
-      chart: vault
-      targetRevision: 0.28.0
-      helm:
-        valueFiles:
-          - $values/vault/helm-values/vault-values.yaml
-    - repoURL: https://github.com/alanredfordhayes/platform.git
-      targetRevision: HEAD
-      ref: values
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.28.0
+    helm:
+      valueFiles:
+        - $values/vault-values.yaml
+      values: |
+        global:
+          tlsDisable: true  # Disable TLS for minikube/local development
+        server:
+          ha:
+            enabled: false  # Disable HA for single-node (minikube)
+            replicas: 1
+            antiAffinity: "soft"  # Allow pods on same node
+          dataStorage:
+            enabled: true
+            size: 2Gi  # Reduced for minikube
+            storageClass: standard  # Use minikube's default storage class
+          auditStorage:
+            enabled: false  # Disable audit storage for minikube
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        ui:
+          enabled: true
+        ingress:
+          enabled: false  # Disable ingress for local development
   syncPolicy:
     automated:
       prune: false

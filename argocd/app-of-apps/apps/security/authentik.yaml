@@ -17,6 +17,57 @@ spec:
     repoURL: https://charts.goauthentik.io
     chart: authentik
     targetRevision: 2024.10.0
+    helm:
+      valueFiles:
+        - $values/authentik-values.yaml
+      values: |
+        authentik:
+          secret_key: "env://SECRET_KEY"  # From authentik-secret-key secret
+          postgresql:
+            enabled: true  # Using embedded PostgreSQL for now
+            auth:
+              password: "env://POSTGRES_PASSWORD"
+        postgresql:
+          enabled: true
+          auth:
+            password: "env://POSTGRES_PASSWORD"
+          persistence:
+            enabled: true
+            size: 10Gi
+            storageClass: fast-ssd
+        server:
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            hosts:
+              - host: authentik.local  # Update with your actual hostname
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-prod"
+            tls:
+              - secretName: authentik-tls
+                hosts:
+                  - authentik.local
+        env:
+          - name: AUTHENTIK_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: authentik-secret-key
+                key: secret_key
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: authentik-postgres-password
+                key: password
+        worker:
+          env:
+            - name: AUTHENTIK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-secret-key
+                  key: secret_key
+          envFrom:
+            - secretRef:
+                name: authentik-bootstrap
   syncPolicy:
     automated:
       prune: true
