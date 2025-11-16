@@ -1,0 +1,270 @@
+---
+description: Prevent Python scripts from applying configurations that are not stored in files
+globs:
+  - "**/*.py"
+  - "**/*.pyi"
+  - "**/requirements.txt"
+  - "**/setup.py"
+alwaysApply: true
+---
+
+# GitOps Rule: No Inline Configuration in Python
+
+## Forbidden Patterns
+
+**NEVER use Python scripts to apply inline YAML/JSON configurations via subprocess, os.system, or similar methods.** All configurations must be stored in files and committed to Git before application.
+
+### Forbidden Python Patterns
+
+- `subprocess.run(['kubectl', 'apply', '-f', '-'], input=yaml_string)` - Applying inline YAML via subprocess
+- `os.system('kubectl apply -f - <<EOF\n...\nEOF')` - Using os.system with heredoc
+- `subprocess.Popen(['kubectl', 'apply', '-f', '-'], stdin=subprocess.PIPE).communicate(yaml_bytes)` - Piping YAML to kubectl
+- Any Python code that generates YAML/JSON and applies it directly without saving to a file first
+- Using `tempfile` to create temporary files that are not committed to Git
+
+### Why This Rule Exists
+
+1. **GitOps Principle**: All infrastructure changes must be version-controlled in Git
+2. **Traceability**: Changes must be visible in Git history
+3. **Reproducibility**: Configurations must be stored for future reference and rollback
+4. **Argo CD Management**: Resources are managed by Argo CD from Git - inline changes cause drift
+5. **Code Review**: Inline configurations in Python code are harder to review than separate YAML files
+6. **Maintainability**: Separating configuration from code improves maintainability
+
+## Correct Approach
+
+### Step 1: Write Configuration to File
+
+Create a YAML/JSON file in the appropriate directory:
+
+```python
+import yaml
+from pathlib import Path
+
+# Define configuration as Python dict
+config = {
+    'apiVersion': 'v1',
+    'kind': 'ConfigMap',
+    'metadata': {
+        'name': 'my-config',
+        'namespace': 'default'
+    },
+    'data': {
+        'key': 'value'
+    }
+}
+
+# Write to file in repository
+config_path = Path('argocd/app-of-apps/configmaps/my-config.yaml')
+config_path.parent.mkdir(parents=True, exist_ok=True)
+
+with open(config_path, 'w') as f:
+    yaml.dump(config, f, default_flow_style=False)
+```
+
+### Step 2: Commit to Git
+
+```python
+import subprocess
+
+# Stage and commit the file
+subprocess.run(['git', 'add', str(config_path)], check=True)
+subprocess.run(['git', 'commit', '-m', 'feat: add new resource configuration'], check=True)
+subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+```
+
+### Step 3: Apply via File Path
+
+```python
+# Apply using file path, not stdin
+subprocess.run(['kubectl', 'apply', '-f', str(config_path)], check=True)
+```
+
+Or better yet, let Argo CD manage it via an Application manifest.
+
+## Examples
+
+### ❌ WRONG: Inline Configuration in Python
+
+```python
+import subprocess
+import yaml
+
+config = {
+    'apiVersion': 'v1',
+    'kind': 'ConfigMap',
+    'metadata': {'name': 'my-config'},
+    'data': {'key': 'value'}
+}
+
+# WRONG: Applying inline YAML
+yaml_str = yaml.dump(config)
+subprocess.run(
+    ['kubectl', 'apply', '-f', '-'],
+    input=yaml_str.encode(),
+    check=True
+)
+```
+
+### ❌ WRONG: Using Temporary Files
+
+```python
+import tempfile
+import subprocess
+import yaml
+
+config = {...}
+
+# WRONG: Using tempfile that's not committed to Git
+with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    yaml.dump(config, f)
+    subprocess.run(['kubectl', 'apply', '-f', f.name], check=True)
+```
+
+### ✅ CORRECT: File-Based Configuration
+
+```python
+import subprocess
+import yaml
+from pathlib import Path
+
+config = {
+    'apiVersion': 'v1',
+    'kind': 'ConfigMap',
+    'metadata': {'name': 'my-config', 'namespace': 'default'},
+    'data': {'key': 'value'}
+}
+
+# Write to repository file
+config_path = Path('argocd/app-of-apps/configmaps/my-config.yaml')
+config_path.parent.mkdir(parents=True, exist_ok=True)
+
+with open(config_path, 'w') as f:
+    yaml.dump(config, f, default_flow_style=False)
+
+# Commit to Git
+subprocess.run(['git', 'add', str(config_path)], check=True)
+subprocess.run(['git', 'commit', '-m', 'feat: add my-config ConfigMap'], check=True)
+subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+
+# Apply using file path
+subprocess.run(['kubectl', 'apply', '-f', str(config_path)], check=True)
+```
+
+### ✅ CORRECT: Using Existing Files
+
+```python
+import subprocess
+from pathlib import Path
+
+# Apply from existing file in repository
+config_path = Path('argocd/app-of-apps/configmaps/my-config.yaml')
+subprocess.run(['kubectl', 'apply', '-f', str(config_path)], check=True)
+```
+
+## Python-Specific Patterns to Avoid
+
+### ❌ Avoid: Dynamic Configuration Generation Without Files
+
+```python
+# WRONG: Generating and applying without saving
+for namespace in namespaces:
+    config = generate_config(namespace)
+    yaml_str = yaml.dump(config)
+    subprocess.run(['kubectl', 'apply', '-f', '-'], input=yaml_str.encode())
+```
+
+### ✅ Prefer: Generate Files, Then Apply
+
+```python
+# CORRECT: Generate files, commit, then apply
+for namespace in namespaces:
+    config = generate_config(namespace)
+    config_path = Path(f'argocd/app-of-apps/configmaps/{namespace}-config.yaml')
+    
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f)
+    
+    subprocess.run(['git', 'add', str(config_path)], check=True)
+
+subprocess.run(['git', 'commit', '-m', 'feat: add namespace configs'], check=True)
+subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+
+# Then apply
+for config_path in Path('argocd/app-of-apps/configmaps').glob('*-config.yaml'):
+    subprocess.run(['kubectl', 'apply', '-f', str(config_path)], check=True)
+```
+
+## Testing and Development
+
+For local testing, you may temporarily use files, but they must be committed:
+
+```python
+# For testing: Create file, test, then commit
+test_config_path = Path('argocd/app-of-apps/configmaps/test-config.yaml')
+# ... create and test ...
+# MUST commit before applying to cluster
+subprocess.run(['git', 'add', str(test_config_path)], check=True)
+subprocess.run(['git', 'commit', '-m', 'test: add test config'], check=True)
+```
+
+## Emergency Situations
+
+If you absolutely must apply a configuration immediately from Python:
+
+1. Apply the configuration (document why in code comments)
+2. **IMMEDIATELY** write the same content to a file in the repository
+3. Commit and push the change
+4. Let Argo CD sync to ensure consistency
+
+```python
+# Emergency: Apply first, then save to Git
+config = {...}
+yaml_str = yaml.dump(config)
+
+# Apply (document why this is emergency)
+subprocess.run(['kubectl', 'apply', '-f', '-'], input=yaml_str.encode(), check=True)
+
+# IMMEDIATELY save to file and commit
+config_path = Path('argocd/app-of-apps/configmaps/emergency-config.yaml')
+with open(config_path, 'w') as f:
+    f.write(yaml_str)
+
+subprocess.run(['git', 'add', str(config_path)], check=True)
+subprocess.run(['git', 'commit', '-m', 'emergency: add emergency config (applied inline)'], check=True)
+subprocess.run(['git', 'push', 'origin', 'main'], check=True)
+```
+
+**Note**: Emergency inline applications should be extremely rare and always followed by a Git commit.
+
+## Enforcement
+
+When writing Python code or suggesting Python scripts:
+
+- ✅ Always write configurations to files in the repository
+- ✅ Always commit changes to Git before applying
+- ✅ Always use `kubectl apply -f <file-path>` with file paths
+- ✅ Use `pathlib.Path` for file operations
+- ❌ Never use `subprocess` with `stdin` for configuration
+- ❌ Never use `tempfile` for configurations (unless immediately committed)
+- ❌ Never use `os.system` with heredoc patterns
+- ❌ Never generate YAML/JSON and apply directly without saving
+
+## Related Rules
+
+- See `.cursor/rules/no-inline-config-apply.mdc` for shell script restrictions
+- See `.cursor/rules/no-kubectl-patch.mdc` for kubectl patch restrictions
+- See `AGENTS.md` for GitOps principles
+
+## Python Libraries
+
+When working with Kubernetes in Python:
+
+- ✅ Use `kubernetes` Python client library for reading resources
+- ✅ Use file-based approaches for creating/updating resources
+- ✅ Use `pyyaml` or `ruamel.yaml` for YAML file manipulation
+- ✅ Use `pathlib` for file path operations
+
+## Reminder
+
+**Remember**: If it's not in Git, it doesn't exist. All infrastructure is code and must be version-controlled, even when generated by Python scripts.

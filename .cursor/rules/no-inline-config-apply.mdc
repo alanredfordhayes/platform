@@ -1,0 +1,116 @@
+---
+description: Prevent applying configurations that are not stored in files
+globs:
+  - "**/*.sh"
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/*.md"
+alwaysApply: true
+---
+
+# GitOps Rule: No Inline Configuration Application
+
+## Forbidden Patterns
+
+**NEVER use `kubectl apply -f -` with heredoc/EOF patterns or inline YAML.** All configurations must be stored in files and committed to Git before application.
+
+### Forbidden Commands
+
+- `kubectl apply -f - <<'EOF'` - Applying inline YAML via heredoc
+- `kubectl apply -f - <<EOF` - Applying inline YAML via heredoc
+- `kubectl apply -f -` with piped input - Applying configurations from stdin
+- `echo "yaml content" | kubectl apply -f -` - Piping YAML to kubectl
+- Any kubectl command that reads configuration from stdin instead of a file
+
+### Why This Rule Exists
+
+1. **GitOps Principle**: All infrastructure changes must be version-controlled in Git
+2. **Traceability**: Changes must be visible in Git history
+3. **Reproducibility**: Configurations must be stored for future reference and rollback
+4. **Argo CD Management**: Resources are managed by Argo CD from Git - inline changes cause drift
+5. **Audit Trail**: All changes must be traceable through Git commits
+
+## Correct Approach
+
+### Step 1: Create Configuration File
+
+Create a YAML file in the appropriate directory:
+
+```bash
+# Create the configuration file
+vim argocd/app-of-apps/apps/security/my-resource.yaml
+```
+
+### Step 2: Commit to Git
+
+```bash
+git add argocd/app-of-apps/apps/security/my-resource.yaml
+git commit -m "feat: add new resource configuration"
+git push origin main
+```
+
+### Step 3: Apply via Argo CD or kubectl apply
+
+If using Argo CD (preferred):
+- Argo CD will automatically detect changes and sync (if auto-sync enabled)
+- Or manually sync: `argocd app sync <app-name>`
+
+If applying directly (for testing):
+```bash
+kubectl apply -f argocd/app-of-apps/apps/security/my-resource.yaml
+```
+
+## Examples
+
+### ❌ WRONG: Inline Configuration
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+  namespace: default
+data:
+  key: value
+EOF
+```
+
+### ✅ CORRECT: File-Based Configuration
+
+1. Create file: `argocd/app-of-apps/configmaps/my-config.yaml`
+2. Commit to Git
+3. Apply: `kubectl apply -f argocd/app-of-apps/configmaps/my-config.yaml`
+
+Or better yet, let Argo CD manage it via an Application manifest.
+
+## Emergency Situations
+
+If you absolutely must apply a configuration immediately:
+
+1. Apply the configuration (document why)
+2. **IMMEDIATELY** create the file in Git with the same content
+3. Commit and push the change
+4. Let Argo CD sync to ensure consistency
+
+**Note**: Emergency inline applications should be extremely rare and always followed by a Git commit.
+
+## Enforcement
+
+When suggesting commands or making changes:
+
+- ✅ Always create YAML files in the repository
+- ✅ Always commit changes to Git before applying
+- ✅ Always use `kubectl apply -f <file-path>` with file paths
+- ❌ Never suggest `kubectl apply -f -` with heredoc
+- ❌ Never suggest piping YAML to kubectl
+- ❌ Never suggest inline YAML in terminal commands
+
+## Related Rules
+
+- See `.cursor/rules/no-kubectl-patch.mdc` for restrictions on kubectl patch commands
+- See `AGENTS.md` for GitOps principles
+
+## Reminder
+
+**Remember**: If it's not in Git, it doesn't exist. All infrastructure is code and must be version-controlled.
