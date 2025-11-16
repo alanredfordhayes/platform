@@ -78,7 +78,7 @@ spec:
         targetRevision: '{{.targetRevision}}'
         helm:
           values: |
-{{.helmValues | indent 12}}
+{{.helmValues}}
       syncPolicy:
         automated:
           prune: {{if eq .pruneBool "true"}}true{{else}}false{{end}}
