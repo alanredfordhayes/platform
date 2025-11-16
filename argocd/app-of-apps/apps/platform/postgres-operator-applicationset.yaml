@@ -1,0 +1,93 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: postgres-operator
+  namespace: argocd
+  labels:
+    app.kubernetes.io/instance: platform
+    app.kubernetes.io/name: postgres-operator
+spec:
+  generators:
+    - list:
+        elements:
+          # First: Install CRDs using minimal Helm chart configuration
+          - name: postgres-operator-crds
+            syncWave: "-1"
+            repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+            chart: postgres-operator
+            targetRevision: "1.10.0"
+            helmValues: |
+              # Minimal configuration for CRD installation
+              # Only deploy enough to trigger CRD installation
+              replicaCount: 1
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+            automatedSync: "false"
+            prune: "false"
+            selfHeal: "false"
+          # Second: Install PostgreSQL operator main deployment
+          - name: postgres-operator-main
+            syncWave: "0"
+            repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+            chart: postgres-operator
+            targetRevision: "1.10.0"
+            helmValues: ""
+            automatedSync: "true"
+            prune: "true"
+            selfHeal: "true"
+          # Third: Install PostgreSQL operator UI
+          - name: postgres-operator-ui
+            syncWave: "1"
+            repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
+            chart: postgres-operator-ui
+            targetRevision: "1.10.0"
+            helmValues: ""
+            automatedSync: "true"
+            prune: "true"
+            selfHeal: "true"
+  template:
+    metadata:
+      name: '{{name}}'
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+      labels:
+        app.kubernetes.io/instance: platform
+        app.kubernetes.io/name: '{{name}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{syncWave}}'
+    spec:
+      project: platform
+      destination:
+        namespace: postgres-operator
+        server: https://kubernetes.default.svc
+      source:
+        repoURL: '{{repoURL}}'
+        chart: '{{chart}}'
+        targetRevision: '{{targetRevision}}'
+        helm:
+          values: '{{helmValues}}'
+      syncPolicy:
+        automated:
+          prune: {{prune}}
+          selfHeal: {{selfHeal}}
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          namespace: postgres-operator
+          jsonPointers:
+            - /data
+        - group: ""
+          kind: ConfigMap
+          namespace: postgres-operator
+          jsonPointers:
+            - /data
