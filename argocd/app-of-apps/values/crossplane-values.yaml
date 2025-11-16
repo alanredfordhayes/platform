@@ -1,0 +1,31 @@
+# Crossplane Values File
+# This file contains configuration for the Crossplane deployment
+# Used by: Crossplane Argo CD Application
+
+# Controller Configuration
+replicaCount: 2
+
+# Controller Resources
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Controller Arguments
+args:
+  - --enable-usages
+
+# RBAC Manager Configuration
+rbacManager:
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
